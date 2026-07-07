@@ -142,6 +142,11 @@ button:hover{background:#16305c;}
 <div class="card no-print">
 <h1>Perhitungan di Surat Keterangan Belajar Bahasa Jepang</h1>
 
+<div style="margin-bottom:15px;">
+<label>Nama Siswa</label>
+<input type="text" id="studentName" placeholder="Masukkan nama siswa" style="width:97%;">
+</div>
+
 <div class="grid">
 <div>
 <label>Tanggal Mulai Program</label>
@@ -281,12 +286,14 @@ function generateSummary(){
         }
     }
 
+    const studentName=document.getElementById("studentName").value.trim() || "-";
+
     const totalRemain=totalAll-totalDone-alfaCount;
 
     const narasi=`
     <p style="margin-top:20px; line-height:1.6;">
     Sampai dengan tanggal <strong>${formatDate(finish)}</strong>, 
-    siswa telah mengikuti pembelajaran selama 
+    siswa <strong>${studentName}</strong> telah mengikuti pembelajaran selama 
     <strong>${totalDone} hari</strong> atau 
     <strong>${totalDone*hoursPerDay} jam</strong> 
     dari total keseluruhan program 
@@ -301,6 +308,7 @@ function generateSummary(){
     document.getElementById("resultArea").innerHTML=`
     <table class="result-table">
     <tr><th colspan="2">Rincian Program Pembelajaran</th></tr>
+    <tr><td>Nama Siswa</td><td><strong>${studentName}</strong></td></tr>
     <tr><td>Periode Sudah Belajar</td><td>${formatDate(start)} s/d ${formatDate(finish)}</td></tr>
     <tr><td>Periode Program Keseluruhan</td><td>${formatDate(start)} s/d ${formatDate(end)}</td></tr>
     <tr><td>Total Hari Masuk / Total Jam Efektif</td><td><strong>${totalDone} hari / ${totalDone*hoursPerDay} jam</strong></td></tr>
@@ -398,7 +406,17 @@ async function downloadPNG(){
             useCORS:true
         });
         const link=document.createElement("a");
-        link.download="surat_keterangan_"+Date.now()+".png";
+        const studentName=document.getElementById("studentName").value.trim() || "siswa";
+        const safeName=studentName.replace(/[^a-z0-9]+/gi,"_");
+
+        const now=new Date();
+        const tanggal=now.getFullYear()+
+            String(now.getMonth()+1).padStart(2,"0")+
+            String(now.getDate()).padStart(2,"0");
+        const jam=String(now.getHours()).padStart(2,"0")+"."+
+            String(now.getMinutes()).padStart(2,"0");
+
+        link.download=`Hasil_Cek_SuketBelajarBhsJepang_${safeName}_${tanggal}_${jam}.png`;
         link.href=canvas.toDataURL("image/png");
         link.click();
     }catch(err){
