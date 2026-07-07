@@ -181,18 +181,11 @@ button:hover{background:#16305c;}
 
 <br><br>
 
-<label>Tambah Hari Libur</label>
-<input type="date" id="holidayDate">
-<input type="text" id="holidayName" placeholder="Nama Hari Libur">
-<button type="button" onclick="addHoliday()">Tambah</button>
-<div id="holidayContainer"></div>
+<div class="action-bar">
+<button type="button" onclick="tampilkanTanggal()">🔎 Tampilkan Tanggal</button>
+</div>
 
-<br>
-
-<label>Tambah Alfa</label>
-<input type="date" id="absentDate">
-<button type="button" onclick="addAbsent()">Tambah</button>
-<div id="absentContainer"></div>
+<div id="dateListArea"></div>
 
 <br>
 <div class="action-bar">
@@ -235,27 +228,93 @@ function formatDate(date){
 let holidays=[];
 let absents=[];
 
-function addHoliday(){
-    const date=document.getElementById("holidayDate").value;
-    const name=document.getElementById("holidayName").value;
-    if(date && name){
-        holidays.push({date,name});
-        document.getElementById("holidayContainer").innerHTML+=
-        `<div>🔴 ${date} : ${name}</div>`;
-        document.getElementById("holidayName").value="";
+function tampilkanTanggal(){
+    const startVal=document.getElementById("startDate").value;
+    const endVal=document.getElementById("endDate").value;
+
+    if(!startVal || !endVal){
+        alert("Isi Tanggal Mulai Program dan Tanggal Rencana Akhir Program terlebih dahulu.");
+        return;
+    }
+
+    const checkedDays=Array.from(document.querySelectorAll(".hari-item input:checked"))
+    .map(cb=>parseInt(cb.value));
+
+    if(checkedDays.length===0){
+        alert("Pilih minimal satu Hari Belajar terlebih dahulu.");
+        return;
+    }
+
+    const start=parseLocalDate(startVal);
+    const end=parseLocalDate(endVal);
+    const namaHari=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+
+    let rows="";
+    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
+        if(!checkedDays.includes(d.getDay())) continue;
+        const str=formatDate(d);
+        const label=`${namaHari[d.getDay()]}, ${String(d.getDate()).padStart(2,"0")} ${d.toLocaleString('id-ID',{month:'long'})} ${d.getFullYear()}`;
+        rows+=`
+        <tr data-date="${str}">
+        <td>${label}</td>
+        <td style="text-align:center;"><input type="checkbox" class="chk-libur" onchange="toggleLibur(this)"></td>
+        <td><input type="text" class="txt-libur-nama" placeholder="Nama hari libur (opsional)" style="width:90%;" disabled></td>
+        <td style="text-align:center;"><input type="checkbox" class="chk-alfa" onchange="toggleAlfa(this)"></td>
+        </tr>`;
+    }
+
+    document.getElementById("dateListArea").innerHTML=`
+    <div class="card" style="margin-top:15px;">
+    <h3 style="color:#1e3c72;margin-top:0;">Pilih Hari Libur / Alfa</h3>
+    <p style="font-size:13px;color:#666;">Centang <strong>Libur</strong> atau <strong>Alfa</strong> pada tanggal yang sesuai, lalu klik <strong>Hitung & Tampilkan</strong>. Nama hari libur boleh dikosongkan.</p>
+    <div style="overflow-x:auto;">
+    <table class="result-table">
+    <tr><th>Tanggal</th><th>Libur</th><th>Nama Hari Libur</th><th>Alfa</th></tr>
+    ${rows}
+    </table>
+    </div>
+    </div>
+    `;
+}
+
+function toggleLibur(cb){
+    const row=cb.closest("tr");
+    const txt=row.querySelector(".txt-libur-nama");
+    const alfaCb=row.querySelector(".chk-alfa");
+    txt.disabled=!cb.checked;
+    if(!cb.checked) txt.value="";
+    if(cb.checked) alfaCb.checked=false;
+}
+
+function toggleAlfa(cb){
+    const row=cb.closest("tr");
+    const liburCb=row.querySelector(".chk-libur");
+    const txt=row.querySelector(".txt-libur-nama");
+    if(cb.checked){
+        liburCb.checked=false;
+        txt.disabled=true;
+        txt.value="";
     }
 }
 
-function addAbsent(){
-    const date=document.getElementById("absentDate").value;
-    if(date){
-        absents.push(date);
-        document.getElementById("absentContainer").innerHTML+=
-        `<div>🟠 ${date}</div>`;
-    }
+function collectLiburAlfa(){
+    holidays=[];
+    absents=[];
+    document.querySelectorAll("#dateListArea tr[data-date]").forEach(row=>{
+        const date=row.getAttribute("data-date");
+        const liburChecked=row.querySelector(".chk-libur").checked;
+        const alfaChecked=row.querySelector(".chk-alfa").checked;
+        if(liburChecked){
+            const nama=row.querySelector(".txt-libur-nama").value.trim() || "Libur";
+            holidays.push({date,name:nama});
+        }else if(alfaChecked){
+            absents.push(date);
+        }
+    });
 }
 
 function generateAll(){
+    collectLiburAlfa();
     generateSummary();
     generateCalendar();
 }
