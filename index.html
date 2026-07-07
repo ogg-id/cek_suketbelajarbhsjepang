@@ -123,6 +123,11 @@ button:hover{background:#16305c;}
 .action-bar button.btn-pdf{background:#c0392b;}
 .action-bar button.btn-pdf:hover{background:#922b21;}
 
+.mode-btn{background:#95a5a6;}
+.mode-btn:hover{background:#7f8c8d;}
+#modeLiburBtn.mode-active{background:#c0392b;}
+#modeAlfaBtn.mode-active{background:#e67e22;}
+
 /* Grid multi-bulan agar kompak (tampilan layar & dasar utk print) */
 .cal-grid{
     display:flex;
@@ -185,7 +190,12 @@ button:hover{background:#16305c;}
 <button type="button" onclick="tampilkanTanggal()">🔎 Tampilkan Tanggal</button>
 </div>
 
-<div id="dateListArea"></div>
+<div class="action-bar no-print" id="modeBar" style="display:none;">
+<span style="align-self:center;font-weight:500;">Mode Klik Tanggal:</span>
+<button type="button" id="modeLiburBtn" class="mode-btn" onclick="setClickMode('libur')">🔴 Isi Libur</button>
+<button type="button" id="modeAlfaBtn" class="mode-btn" onclick="setClickMode('alfa')">🟠 Isi Alfa</button>
+<button type="button" class="mode-btn" onclick="setClickMode(null)">✖️ Nonaktifkan Mode</button>
+</div>
 
 <br>
 <div class="action-bar">
@@ -228,12 +238,15 @@ function formatDate(date){
 let holidays=[];
 let absents=[];
 
+let clickMode=null; // 'libur' | 'alfa' | null
+
 function tampilkanTanggal(){
     const startVal=document.getElementById("startDate").value;
+    const finishVal=document.getElementById("finishDate").value;
     const endVal=document.getElementById("endDate").value;
 
-    if(!startVal || !endVal){
-        alert("Isi Tanggal Mulai Program dan Tanggal Rencana Akhir Program terlebih dahulu.");
+    if(!startVal || !finishVal || !endVal){
+        alert("Isi semua tanggal (Mulai Program, Sudah Selesai Belajar, Rencana Akhir Program) terlebih dahulu.");
         return;
     }
 
@@ -245,76 +258,46 @@ function tampilkanTanggal(){
         return;
     }
 
-    const start=parseLocalDate(startVal);
-    const end=parseLocalDate(endVal);
-    const namaHari=["Minggu","Senin","Selasa","Rabu","Kamis","Jumat","Sabtu"];
+    generateCalendar();
+    document.getElementById("modeBar").style.display="flex";
+}
 
-    let rows="";
-    for(let d=new Date(start); d<=end; d.setDate(d.getDate()+1)){
-        if(!checkedDays.includes(d.getDay())) continue;
-        const str=formatDate(d);
-        const label=`${namaHari[d.getDay()]}, ${String(d.getDate()).padStart(2,"0")} ${d.toLocaleString('id-ID',{month:'long'})} ${d.getFullYear()}`;
-        rows+=`
-        <tr data-date="${str}">
-        <td>${label}</td>
-        <td style="text-align:center;"><input type="checkbox" class="chk-libur" onchange="toggleLibur(this)"></td>
-        <td><input type="text" class="txt-libur-nama" placeholder="Nama hari libur (opsional)" style="width:90%;" disabled></td>
-        <td style="text-align:center;"><input type="checkbox" class="chk-alfa" onchange="toggleAlfa(this)"></td>
-        </tr>`;
+function setClickMode(mode){
+    clickMode = mode;
+    document.getElementById("modeLiburBtn").classList.toggle("mode-active", clickMode==="libur");
+    document.getElementById("modeAlfaBtn").classList.toggle("mode-active", clickMode==="alfa");
+}
+
+function handleDayClick(str){
+    if(!clickMode){
+        alert("Pilih dulu mode: 🔴 Isi Libur atau 🟠 Isi Alfa, sebelum klik tanggal.");
+        return;
     }
 
-    document.getElementById("dateListArea").innerHTML=`
-    <div class="card" style="margin-top:15px;">
-    <h3 style="color:#1e3c72;margin-top:0;">Pilih Hari Libur / Alfa</h3>
-    <p style="font-size:13px;color:#666;">Centang <strong>Libur</strong> atau <strong>Alfa</strong> pada tanggal yang sesuai, lalu klik <strong>Hitung & Tampilkan</strong>. Nama hari libur boleh dikosongkan.</p>
-    <div style="overflow-x:auto;">
-    <table class="result-table">
-    <tr><th>Tanggal</th><th>Libur</th><th>Nama Hari Libur</th><th>Alfa</th></tr>
-    ${rows}
-    </table>
-    </div>
-    </div>
-    `;
-}
-
-function toggleLibur(cb){
-    const row=cb.closest("tr");
-    const txt=row.querySelector(".txt-libur-nama");
-    const alfaCb=row.querySelector(".chk-alfa");
-    txt.disabled=!cb.checked;
-    if(!cb.checked) txt.value="";
-    if(cb.checked) alfaCb.checked=false;
-}
-
-function toggleAlfa(cb){
-    const row=cb.closest("tr");
-    const liburCb=row.querySelector(".chk-libur");
-    const txt=row.querySelector(".txt-libur-nama");
-    if(cb.checked){
-        liburCb.checked=false;
-        txt.disabled=true;
-        txt.value="";
-    }
-}
-
-function collectLiburAlfa(){
-    holidays=[];
-    absents=[];
-    document.querySelectorAll("#dateListArea tr[data-date]").forEach(row=>{
-        const date=row.getAttribute("data-date");
-        const liburChecked=row.querySelector(".chk-libur").checked;
-        const alfaChecked=row.querySelector(".chk-alfa").checked;
-        if(liburChecked){
-            const nama=row.querySelector(".txt-libur-nama").value.trim() || "Libur";
-            holidays.push({date,name:nama});
-        }else if(alfaChecked){
-            absents.push(date);
+    if(clickMode==="libur"){
+        const idx=holidays.findIndex(h=>h.date===str);
+        if(idx>-1){
+            holidays.splice(idx,1);
+        }else{
+            absents=absents.filter(a=>a!==str);
+            const nama=prompt("Nama hari libur (boleh dikosongkan):","");
+            if(nama===null) return;
+            holidays.push({date:str, name:nama.trim()});
         }
-    });
+    }else if(clickMode==="alfa"){
+        const idx=absents.indexOf(str);
+        if(idx>-1){
+            absents.splice(idx,1);
+        }else{
+            holidays=holidays.filter(h=>h.date!==str);
+            absents.push(str);
+        }
+    }
+
+    generateCalendar();
 }
 
 function generateAll(){
-    collectLiburAlfa();
     generateSummary();
     generateCalendar();
 }
@@ -412,16 +395,20 @@ function generateCalendar(){
             const date=new Date(year,month,i);
             const str=formatDate(date);
             let className="nonaktif";
+            let clickable=false;
 
 			if(date>=start && date<=end){
 
 				if(holidays.some(h=>h.date===str)){
 					className="libur";
+					clickable=true;
 				}
 				else if(absents.includes(str)){
 					className="alfa";
+					clickable=true;
 				}
 				else if(checkedDays.includes(date.getDay())){
+					clickable=true;
 					if(date<=finish){
 						className="masuk";      // sudah dijalani
 					} else {
@@ -430,13 +417,14 @@ function generateCalendar(){
 				}
 			}
 
-            calendarHTML+=`<div class="day ${className}">${i}</div>`;
+            const clickAttr=clickable?` onclick="handleDayClick('${str}')" style="cursor:pointer;"`:"";
+            calendarHTML+=`<div class="day ${className}"${clickAttr}>${i}</div>`;
         }
 
         calendarHTML+=`</div><div class="legend">`;
 
         holidays.filter(h=>parseLocalDate(h.date).getMonth()===month)
-        .forEach(h=>calendarHTML+=`<div>🔴 ${h.date} : ${h.name}</div>`);
+        .forEach(h=>calendarHTML+=`<div>🔴 ${h.date} : ${h.name || "Libur"}</div>`);
 
         absents.filter(a=>parseLocalDate(a).getMonth()===month)
         .forEach(a=>calendarHTML+=`<div>🟠 ${a} : Alfa</div>`);
