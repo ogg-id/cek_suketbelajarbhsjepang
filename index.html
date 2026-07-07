@@ -111,12 +111,77 @@ button:hover{background:#16305c;}
 }
 .hari-item:hover{background:#dfe6f3;}
 .hari-item input{width:16px;height:16px;}
+
+.action-bar{
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:15px;
+}
+.action-bar button{background:#27ae60;}
+.action-bar button:hover{background:#1e8449;}
+.action-bar button.btn-pdf{background:#c0392b;}
+.action-bar button.btn-pdf:hover{background:#922b21;}
+
+/* Grid multi-bulan agar kompak (tampilan layar & dasar utk print) */
+.cal-grid{
+    display:flex;
+    flex-wrap:wrap;
+    gap:20px;
+}
+.cal-month{
+    flex:1 1 300px;
+    min-width:260px;
+}
+
+/* ====== PRINT / EXPORT SATU HALAMAN A4 ====== */
+@media print{
+    @page{
+        size:A4 landscape;
+        margin:8mm;
+    }
+    body{
+        background:white !important;
+        padding:0 !important;
+    }
+    .no-print{
+        display:none !important;
+    }
+    #printArea{
+        transform-origin:top left;
+    }
+    .card{
+        box-shadow:none;
+        border-radius:0;
+        padding:10px;
+        margin-bottom:8px;
+        page-break-inside:avoid;
+    }
+    .result-table th, .result-table td{
+        padding:6px 8px;
+        font-size:12px;
+    }
+    .cal-month{
+        flex:1 1 220px;
+        min-width:200px;
+    }
+    .legend{
+        font-size:10px;
+        padding:6px;
+    }
+    .day{
+        padding:4px;
+        font-size:10px;
+    }
+    h1{font-size:18px;margin:5px 0;}
+    h3{font-size:13px;margin:6px 0 4px;}
+}
 </style>
 </head>
 
 <body>
 
-<div class="card">
+<div class="card no-print">
 <h1>Perhitungan di Surat Keterangan Belajar Bahasa Jepang</h1>
 
 <div class="grid">
@@ -167,10 +232,15 @@ button:hover{background:#16305c;}
 <div id="absentContainer"></div>
 
 <br>
+<div class="action-bar">
 <button type="button" onclick="generateAll()">Hitung & Tampilkan</button>
+<button type="button" class="btn-pdf" onclick="printPDF()">🖨️ Cetak / Simpan PDF (1 Halaman A4)</button>
+<button type="button" onclick="downloadPNG()">🖼️ Download PNG</button>
+</div>
 
 </div>
 
+<div id="printArea">
 <div class="card">
 <div id="resultArea"></div>
 </div>
@@ -178,11 +248,14 @@ button:hover{background:#16305c;}
 <div class="card">
 <div id="calendarArea"></div>
 </div>
+</div>
 
-<footer style="justify-self: center;">
+<footer class="no-print" style="justify-self: center;">
   OGG Staf Indonesia | 
   Versi 2026.03.01
 </footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 
 <script>
 
@@ -294,7 +367,7 @@ function generateCalendar(){
 
     const hari=["Min","Sen","Sel","Rab","Kam","Jum","Sab"];
 
-    let calendarHTML="";
+    let calendarHTML="<div class=\"cal-grid\">";
     let current=new Date(start.getFullYear(),start.getMonth(),1);
 
     while(current<=end){
@@ -304,7 +377,7 @@ function generateCalendar(){
         const firstDay=new Date(year,month,1).getDay();
         const daysInMonth=new Date(year,month+1,0).getDate();
 
-        calendarHTML+=`<div style="margin-bottom:40px;">
+        calendarHTML+=`<div class="cal-month">
         <h3>${current.toLocaleString('id-ID',{month:'long'})} ${year}</h3>
         <div class="days-header">${hari.map(h=>`<div>${h}</div>`).join("")}</div>
         <div class="days">`;
@@ -349,7 +422,70 @@ function generateCalendar(){
         current=new Date(year,month+1,1);
     }
 
+    calendarHTML+="</div>";
+
     document.getElementById("calendarArea").innerHTML=calendarHTML;
+}
+
+/* ================= EXPORT: CETAK PDF 1 HALAMAN A4 ================= */
+
+function fitPrintAreaToPage(){
+    const area=document.getElementById("printArea");
+    // reset dulu sebelum diukur ulang
+    area.style.transform="none";
+    area.style.width="";
+
+    const mmToPx=96/25.4;
+    // A4 landscape, margin @page 8mm tiap sisi
+    const pageWidthPx=(297-16)*mmToPx;
+    const pageHeightPx=(210-16)*mmToPx;
+
+    const contentWidth=area.scrollWidth;
+    const contentHeight=area.scrollHeight;
+
+    const scale=Math.min(pageWidthPx/contentWidth, pageHeightPx/contentHeight, 1);
+
+    area.style.transform=`scale(${scale})`;
+    area.style.width=(100/scale)+"%";
+}
+
+function resetPrintArea(){
+    const area=document.getElementById("printArea");
+    area.style.transform="";
+    area.style.width="";
+}
+
+function printPDF(){
+    fitPrintAreaToPage();
+    setTimeout(()=>{
+        window.print();
+    },50);
+}
+
+window.addEventListener("afterprint", resetPrintArea);
+
+/* ================= EXPORT: PNG KUALITAS TINGGI ================= */
+
+async function downloadPNG(){
+    const area=document.getElementById("printArea");
+    const btns=document.querySelectorAll(".no-print");
+    btns.forEach(b=>b.style.display="none");
+
+    try{
+        const canvas=await html2canvas(area,{
+            scale:3,
+            backgroundColor:"#ffffff",
+            useCORS:true
+        });
+        const link=document.createElement("a");
+        link.download="surat_keterangan_"+Date.now()+".png";
+        link.href=canvas.toDataURL("image/png");
+        link.click();
+    }catch(err){
+        alert("Gagal membuat PNG: "+err.message);
+    }finally{
+        btns.forEach(b=>b.style.display="");
+    }
 }
 
 </script>
