@@ -134,48 +134,6 @@ button:hover{background:#16305c;}
     min-width:260px;
 }
 
-/* ====== PRINT / EXPORT SATU HALAMAN A4 ====== */
-@media print{
-    @page{
-        size:A4 landscape;
-        margin:8mm;
-    }
-    body{
-        background:white !important;
-        padding:0 !important;
-    }
-    .no-print{
-        display:none !important;
-    }
-    #printArea{
-        transform-origin:top left;
-    }
-    .card{
-        box-shadow:none;
-        border-radius:0;
-        padding:10px;
-        margin-bottom:8px;
-        page-break-inside:avoid;
-    }
-    .result-table th, .result-table td{
-        padding:6px 8px;
-        font-size:12px;
-    }
-    .cal-month{
-        flex:1 1 220px;
-        min-width:200px;
-    }
-    .legend{
-        font-size:10px;
-        padding:6px;
-    }
-    .day{
-        padding:4px;
-        font-size:10px;
-    }
-    h1{font-size:18px;margin:5px 0;}
-    h3{font-size:13px;margin:6px 0 4px;}
-}
 </style>
 </head>
 
@@ -234,7 +192,6 @@ button:hover{background:#16305c;}
 <br>
 <div class="action-bar">
 <button type="button" onclick="generateAll()">Hitung & Tampilkan</button>
-<button type="button" class="btn-pdf" onclick="printPDF()">🖨️ Cetak / Simpan PDF (1 Halaman A4)</button>
 <button type="button" onclick="downloadPNG()">🖼️ Download PNG</button>
 </div>
 
@@ -426,43 +383,6 @@ function generateCalendar(){
 
     document.getElementById("calendarArea").innerHTML=calendarHTML;
 }
-
-/* ================= EXPORT: CETAK PDF 1 HALAMAN A4 ================= */
-
-function fitPrintAreaToPage(){
-    const area=document.getElementById("printArea");
-    // reset dulu sebelum diukur ulang
-    area.style.transform="none";
-    area.style.width="";
-
-    const mmToPx=96/25.4;
-    // A4 landscape, margin @page 8mm tiap sisi
-    const pageWidthPx=(297-16)*mmToPx;
-    const pageHeightPx=(210-16)*mmToPx;
-
-    const contentWidth=area.scrollWidth;
-    const contentHeight=area.scrollHeight;
-
-    const scale=Math.min(pageWidthPx/contentWidth, pageHeightPx/contentHeight, 1);
-
-    area.style.transform=`scale(${scale})`;
-    area.style.width=(100/scale)+"%";
-}
-
-function resetPrintArea(){
-    const area=document.getElementById("printArea");
-    area.style.transform="";
-    area.style.width="";
-}
-
-function printPDF(){
-    fitPrintAreaToPage();
-    setTimeout(()=>{
-        window.print();
-    },50);
-}
-
-window.addEventListener("afterprint", resetPrintArea);
 
 /* ================= EXPORT: PNG KUALITAS TINGGI ================= */
 
